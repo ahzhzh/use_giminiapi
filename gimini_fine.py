@@ -1,4 +1,4 @@
-import os
+import streamlit as st
 import google.generativeai as genai
 
 from giminiapi_chatbot import GOOGLE_API_KEY
@@ -19,7 +19,8 @@ model = genai.GenerativeModel(
   generation_config=generation_config,
 )
 
-response = model.generate_content([
+
+training_data = "\n".join([
   "input: 램이란?",
   "output: 사용자가 자유롭게 내용을 읽고 쓰고 지울 수 있는 기억장치.",
   "input: 메인보드란?",
@@ -64,4 +65,38 @@ response = model.generate_content([
   "output: ",
 ])
 
-print(response.text)
+
+response = model.generate_content(training_data)
+
+training_response = response.text
+
+# 채팅 히스토리 생성
+chat_history = []
+training_pairs = training_data.split('\n')
+
+for i in range(0, len(training_pairs), 2):
+    if i + 1 < len(training_pairs):  # 입력과 출력이 쌍으로 존재하는지 확인
+        user_input = training_pairs[i]
+        model_output = training_pairs[i + 1]
+        
+        chat_history.extend([
+            {
+                "role": "user",
+                "parts": [user_input]
+            },
+            {
+                "role": "model",
+                "parts": [model_output]
+            }
+        ])
+
+# 채팅 시작 - 전체 히스토리 포함
+chat = model.start_chat(history=chat_history)
+
+st.title("챗봇 파인튜닝?")
+message = st.text_input("무엇이든 물어보세요")
+
+if st.button("전송"):
+    response = chat.send_message(message)
+    st.write("질문에 대한 답변입니다")
+    st.write(response.text)
